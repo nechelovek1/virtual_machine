@@ -2,24 +2,23 @@
 #include <stdbool.h>
 
 #include "stack.h"
+#include "text.h"
 #include "commands.h"
 
 const size_t REG_CNT = 4;
 const size_t MAX_CMD_NUM = 0xff;
+const size_t STACK_MIN_CAPACITY = 5;
 
-typedef struct {
+typedef struct _proc{
     stack_t stk;
     stack_elem_t* code;
     size_t code_size;
-    stack_elem_t regs[REG_CNT];
+    stack_elem_t regs[4];
     stack_t call_stk;
     int pc;
-    int (*commands[MAX_CMD_NUM]) (processor_t*);
+    int (*commands[256]) (struct _proc*);
 } processor_t;
 
-const STACK_MIN_CAPACITY = 5;
-
-//stack_elem_t* read_bytecode(FILE* file);
 
 int processor_read_bytecode(processor_t* proc, FILE* fp);
 int processor_init(processor_t* proc);
@@ -64,14 +63,14 @@ int main(int argc, char* argv[])
 
     processor_init(&proc);
     processor_read_bytecode(&proc, file);
-    processor_run(&proc);
+    processor_loop(&proc);
 
     return 0;
 }
 
 int processor_read_bytecode(processor_t* proc, FILE* fp)
 {
-    size_t bytecode_size = getFileSize(fp);
+    size_t bytecode_size = getFileSize(fp) / sizeof(stack_elem_t);
     proc->code_size = bytecode_size;
     proc->code = calloc(bytecode_size, sizeof(stack_elem_t));
     fread(proc->code, sizeof(stack_elem_t), bytecode_size, fp);
@@ -108,20 +107,33 @@ int processor_init(processor_t* proc)
 
 int processor_loop(processor_t* proc)
 {
-    while (proc->pc < proc->code_size) {
+    while (true) {
+        printf("PC: %d\n", proc->pc);
+        if (proc->pc > proc->code_size || proc->pc < 0) {
+            printf("Segmentation fault! Invalide PC: %d\n", proc->pc);
+            return -1;
+        }
+
         int cmd = proc->code[proc->pc];
+        if (cmd == HLT) {
+            return 0;
+        }
+
         if (cmd < 0 || cmd >= MAX_CMD_NUM) {
-            printf("Segmantation fault!\n");
+            printf("Segmantation fault! Unknown cmd: %d\n", cmd);
+            printf("PC: %d\n", proc->pc);
             return -1;
         }
 
         if (proc->commands[cmd] == NULL) {
-            printf("Segmantation fault!\n");
+            printf("Segmantation fault! Unknown cmd: %d\n", cmd);
+            printf("PC: %d\n", proc->pc);
             return -1;            
         }
 
-        if (!proc->commands[cmd](proc)) {
-            printf("Segmentation fault!\n");
+        if (proc->commands[cmd](proc)) {
+            printf("Segmentation fault! Failed to run command: %d\n", cmd);
+            return -1;
         }
     }
 
@@ -267,6 +279,7 @@ int cmd_pop_r(processor_t* proc)
     }
 
     proc->regs[reg] = elem;
+    proc->pc++;
 
     return 0;
 }
@@ -407,7 +420,6 @@ int cmd_je(processor_t* proc)
     }
 
     return 0;
-
 }
 
 int cmd_jne(processor_t* proc)
@@ -433,7 +445,6 @@ int cmd_jne(processor_t* proc)
     }
 
     return 0;
-
 }
 
 int cmd_in(processor_t* proc)

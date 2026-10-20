@@ -76,6 +76,7 @@ int create_label(translate_ctx_t* ctx, int label_value, int label_address);
 int read_jump(translate_ctx_t* ctx, int cmd_code, line_t cmd_line, size_t* cmd_len);
 int read_register(int* reg, line_t cmd_line, size_t* cmd_len);
 int translate_context_read_text(translate_ctx_t* ctx, FILE* fp);
+int translate_context_destroy(translate_ctx_t* ctx);
 void print_labels(translate_ctx_t* ctx);
 
 int main(int argc, char* argv[])
@@ -97,20 +98,28 @@ int main(int argc, char* argv[])
 
     fclose(input_file);
 
+    ctx.mode = true; //Первый проход
+    if (translate_text(&ctx) != TRANSLATE_OK) {
+        return -1;
+    }
+    print_labels(&ctx);
+
+    ctx.bytecode_size = 0;
+    ctx.mode = false; //Второй проход
+    if (translate_text(&ctx) != TRANSLATE_OK) {
+        return -1;
+    }
+    print_labels(&ctx);
+
     FILE* out_file = NULL;
     if ((out_file = fopen(argv[2], "wb")) == NULL) {
         printf("Failed to open %s", argv[2]);
         return -1;
     }
 
-    ctx.mode = true; //Первый проход
-    translate_text(&ctx);
-    ctx.bytecode_size = 0;
-    ctx.mode = false; //Второй проход
-    translate_text(&ctx);
+    fwrite(ctx.bytecode, ctx.bytecode_size, sizeof(int), out_file);
 
-    fwrite(ctx.bytecode, ctx.bytecode_size, sizeof(label_t), out_file);
-
+    translate_context_destroy(&ctx);
     fclose(out_file);
 
     return 0;
@@ -326,13 +335,15 @@ int read_jump(translate_ctx_t* ctx, int cmd_code, line_t cmd_line, size_t* cmd_l
     *cmd_len += n;
 
     if (cmd_line.line[*cmd_len] == ':') {
-        ctx->bytecode[ctx->bytecode_size] = find_label(ctx, label_value);
-        if (ctx->bytecode[ctx->bytecode_size] == -1) {
+        int label_idx = find_label(ctx, label_value);
+        if (label_idx == -1) {
             if (ctx->mode) {
                 create_label(ctx, label_value, -1);
             } else {
                 return -1;
             }
+        } else {
+            ctx->bytecode[ctx->bytecode_size] = ctx->labels[label_idx].address;
         }
     } else {
         ctx->bytecode[ctx->bytecode_size] = label_value;
@@ -370,4 +381,11 @@ void print_labels(translate_ctx_t* ctx)
     for (size_t i = 0; i < ctx->labels_cnt; i++) {
         printf("lbl: %d addr: %d\n", ctx->labels[i].value, ctx->labels[i].address);
     }
+}
+
+int translate_context_destroy(translate_ctx_t* ctx)
+{
+    free(ctx->labels);
+    free(ctx->bytecode);
+    *ctx = (translate_ctx_t){};
 }
