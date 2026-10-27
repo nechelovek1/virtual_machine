@@ -1,6 +1,8 @@
 #ifndef COMMANDS_H
 #define COMMANDS_H
 
+#include "processor.h"
+
 typedef enum {
     PUSH  = 1,
     ADD   = 2,
@@ -23,7 +25,7 @@ typedef enum {
     RET   = 19,
     PUSHM = 20,
     POPM  = 21,
-    POP = 22,
+    POP   = 22,
 } command_t;
 
 typedef enum {
@@ -37,6 +39,7 @@ typedef struct {
     const char* cmd_word;
     command_t cmd_code;
     size_t cmd_word_len;
+    int (*cmd_func) (processor_t*);
 } cmd_struct_t;
 
 typedef struct {
@@ -44,38 +47,11 @@ typedef struct {
     reg_t reg_val;
 } reg_struct_t;
 
-const cmd_struct_t commands[] = {
-    {"PUSH", PUSH, 4},
-    {"ADD",  ADD,  3},
-    {"SUB",  SUB,  3},
-    {"DIV",  DIV,  3},
-    {"MUL",  MUL,  3},
-    {"OUT",  OUT,  3},
-    {"HLT",  HLT,  3},
-    {"PUSHR", PUSHR, 5},
-    {"POPR",  POPR,  5},
-    {"JMP",  JMP,    3},
-    {"JA",   JA,     2},
-    {"JAE",  JAE,    3},
-    {"JB",   JB,     2},
-    {"JBE",  JBE,    3},
-    {"JE",   JE,     2},
-    {"JNE",  JNE,    3},
-    {"IN",   IN,     2},
-    {"CALL", CALL,   4},
-    {"RET",  RET,    3},
-    {"PUSHM", PUSHM, 5},
-    {"POPM", POPM,   4},
-    {"POP", POP,     3}
-};
+extern const size_t CMD_CNT;
+extern const size_t REGS_CNT;
 
-size_t REGS_CNT = 4;
+extern const cmd_struct_t commands[];
+extern const reg_struct_t registers[];
 
-const reg_struct_t registers[] = {
-    {"AX", AX},
-    {"BX", BX},
-    {"CX", CX},
-    {"DX", DX}
-};
 
 #endif

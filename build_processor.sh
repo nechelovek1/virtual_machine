@@ -1,0 +1,1 @@
+gcc -Iinclude src/processor.c src/stack.c src/text.c src/commands.c src/processor_main.c -o processor

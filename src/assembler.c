@@ -3,93 +3,10 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-//#include "text.h"
 #include "text.h"
 #include "stack.h"
 #include "commands.h"
-
-typedef enum {
-    TRANSLATE_OK,
-    TRANSLATE_TOO_MANY_ARGS,
-    TRANSLATE_MISSING_ARGS,
-    TRANSLATE_UNKNOWN_CMD,
-    TRANSLATE_UNKNOWN_REG,
-    TRANSLATE_BAD_LABEL,
-    TRANSLATE_LABEL_EXIST
-} cmd_read_err_t;
-
-
-typedef struct {
-    int value;
-    int address;
-} label_t;
-
-typedef struct {
-    textfile_t text;
-    label_t* labels;
-    size_t labels_cnt;
-    int* bytecode;
-    size_t bytecode_size;
-    bool mode;
-} translate_ctx_t;
-
-cmd_read_err_t translate_text(translate_ctx_t* ctx);
-cmd_read_err_t read_cmd(translate_ctx_t* ctx, line_t cmd_line);
-int find_label(translate_ctx_t* ctx, int label_value);
-cmd_read_err_t read_label(translate_ctx_t* ctx, line_t label_line, int label_address);
-int create_label(translate_ctx_t* ctx, int label_value, int label_address);
-cmd_read_err_t read_jump(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_line, size_t cmd_len);
-cmd_read_err_t read_register(int* reg, line_t cmd_line, size_t* cmd_len);
-cmd_read_err_t read_command_word(const char* line, size_t* cmd_len, command_t* cmd_code);
-int translate_context_read_text(translate_ctx_t* ctx, FILE* fp);
-int translate_context_destroy(translate_ctx_t* ctx);
-void print_labels(translate_ctx_t* ctx);
-
-int main(int argc, char* argv[])
-{
-    if (argc != 3) {
-        printf("Usage: %s <programm file> <bytecode file>\n", argv[0]);
-        return -1;
-    }
-
-    textfile_t text = {};
-    FILE* input_file = NULL;
-    if ((input_file = fopen(argv[1], "r")) == NULL) {
-        printf("Failed to open %s", argv[1]);
-        return -1;
-    }
-
-    translate_ctx_t ctx = {};
-    translate_context_read_text(&ctx, input_file);
-
-    fclose(input_file);
-
-    ctx.mode = true; //Первый проход
-    if (translate_text(&ctx) != TRANSLATE_OK) {
-        return -1;
-    }
-    print_labels(&ctx);
-
-    ctx.bytecode_size = 0;
-    ctx.mode = false; //Второй проход
-    if (translate_text(&ctx) != TRANSLATE_OK) {
-        return -1;
-    }
-    print_labels(&ctx);
-
-    FILE* out_file = NULL;
-    if ((out_file = fopen(argv[2], "wb")) == NULL) {
-        printf("Failed to open %s", argv[2]);
-        return -1;
-    }
-
-    fwrite(ctx.bytecode, ctx.bytecode_size, sizeof(int), out_file);
-
-    translate_context_destroy(&ctx);
-    fclose(out_file);
-
-    return 0;
-}
+#include "assembler.h"
 
 int translate_context_read_text(translate_ctx_t* ctx, FILE* fp)
 {
@@ -140,6 +57,8 @@ cmd_read_err_t read_cmd(translate_ctx_t* ctx, line_t cmd_line)
         return read_res;
     }
 
+    //TODO избавиться от копипасты (сделать новую функцию)
+
     switch(cmd)
     {
         case PUSH:
@@ -151,19 +70,11 @@ cmd_read_err_t read_cmd(translate_ctx_t* ctx, line_t cmd_line)
             if (res != 1) {
                 return TRANSLATE_MISSING_ARGS;
             }
-            
-            break;
-        case POP:
-            ctx->bytecode[ctx->bytecode_size] = PUSH;
-            ctx->bytecode_size++;
 
-            res = sscanf(cmd_line.line + cmd_len, "%d%n", &elem, &n);
-            cmd_len += n;
-            if (res != 1) {
-                return TRANSLATE_MISSING_ARGS;
-            }
+            ctx->bytecode[ctx->bytecode_size] = elem;
+            ctx->bytecode_size++;
             
-            break;
+            return TRANSLATE_OK;
         case PUSHR:
             ctx->bytecode[ctx->bytecode_size] = PUSHR;
             ctx->bytecode_size++;
@@ -172,7 +83,7 @@ cmd_read_err_t read_cmd(translate_ctx_t* ctx, line_t cmd_line)
             }
             ctx->bytecode_size++;
             
-            break;
+           return TRANSLATE_OK;
         case POPR:
             ctx->bytecode[ctx->bytecode_size] = POPR;
             ctx->bytecode_size++;
@@ -181,11 +92,12 @@ cmd_read_err_t read_cmd(translate_ctx_t* ctx, line_t cmd_line)
             }
             ctx->bytecode_size++;
             
-            break;
+            return TRANSLATE_OK;
         case PUSHM:
             return TRANSLATE_UNKNOWN_CMD;
         case POPM:
             return TRANSLATE_UNKNOWN_CMD;
+        case POP:
         case ADD:
         case SUB:
         case MUL:
@@ -334,7 +246,7 @@ cmd_read_err_t read_command_word(const char* line, size_t* cmd_len, command_t* c
     char cmd_word[6] = "";
     sscanf(line, "%5s", cmd_word);
     
-    for (size_t i = 0; i < sizeof(commands) / sizeof(commands[0]); i++) {
+    for (size_t i = 0; i < CMD_CNT; i++) {
         if (!strcmp(cmd_word, commands[i].cmd_word)) {
             *cmd_len = commands[i].cmd_word_len;
             *cmd_code = commands[i].cmd_code;

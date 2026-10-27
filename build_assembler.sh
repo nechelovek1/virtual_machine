@@ -1,1 +1,1 @@
-gcc -Iinclude src/assembler.c src/stack.c src/text.c -o assembler
+gcc -Iinclude src/assembler.c src/stack.c src/text.c src/commands.c src/processor.c src/assembler_main.c -o assembler
