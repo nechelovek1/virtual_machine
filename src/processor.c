@@ -9,6 +9,8 @@ const size_t REG_CNT = 4;
 const size_t MAX_CMD_NUM = 0xff;
 const size_t STACK_MIN_CAPACITY = 5;
 
+//TODO сделать массив структур для хранения команд Структура включает название команды, enum с кодом, указатель на функцию.
+
 typedef struct _proc{
     stack_t stk;
     stack_elem_t* code;
@@ -23,6 +25,7 @@ typedef struct _proc{
 int processor_read_bytecode(processor_t* proc, FILE* fp);
 int processor_init(processor_t* proc);
 int processor_loop(processor_t* proc);
+int processor_dump(processor_t* proc);
 
 int cmd_push(processor_t* proc);
 int cmd_add(processor_t* proc);
@@ -108,7 +111,6 @@ int processor_init(processor_t* proc)
 int processor_loop(processor_t* proc)
 {
     while (true) {
-        printf("PC: %d\n", proc->pc);
         if (proc->pc > proc->code_size || proc->pc < 0) {
             printf("Segmentation fault! Invalide PC: %d\n", proc->pc);
             return -1;
@@ -119,16 +121,10 @@ int processor_loop(processor_t* proc)
             return 0;
         }
 
-        if (cmd < 0 || cmd >= MAX_CMD_NUM) {
+        if (cmd < 0 || cmd >= MAX_CMD_NUM || proc->commands[cmd] == NULL) {
             printf("Segmantation fault! Unknown cmd: %d\n", cmd);
             printf("PC: %d\n", proc->pc);
             return -1;
-        }
-
-        if (proc->commands[cmd] == NULL) {
-            printf("Segmantation fault! Unknown cmd: %d\n", cmd);
-            printf("PC: %d\n", proc->pc);
-            return -1;            
         }
 
         if (proc->commands[cmd](proc)) {
@@ -480,4 +476,9 @@ int cmd_ret(processor_t* proc)
     }
 
     return 0;
+}
+
+int processor_dump(processor_t* proc)
+{
+
 }
