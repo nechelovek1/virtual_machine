@@ -132,7 +132,7 @@ void skipNonAlphaForward(const char* str, size_t* idx)
 
 void skipNonAlphaBackward(const char* str, size_t* idx)
 {
-    while (idx > 0 && !isalpha(str[*idx]))
+    while (*idx > 0 && !isalpha(str[*idx]))
     {
         (*idx)--;
     }

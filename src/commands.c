@@ -4,30 +4,33 @@
 
 const size_t CMD_CNT = 22;
 const size_t REGS_CNT = 4;
+const size_t MAX_CMD_LEN = 5;
+const size_t NUMS_PER_LINE = 3;
 
+//TODO добавить функцию парсер для комманды
 const cmd_struct_t commands[] = {
-    {"PUSH",  PUSH,  4, &cmd_push},
-    {"ADD",   ADD,   3, &cmd_add},
-    {"SUB",   SUB,   3, &cmd_sub},
-    {"DIV",   DIV,   3, &cmd_div},
-    {"MUL",   MUL,   3, &cmd_mul},
-    {"OUT",   OUT,   3, &cmd_out},
-    {"HLT",   HLT,   3, &cmd_hlt},
-    {"PUSHR", PUSHR, 5, &cmd_push_r},
-    {"POPR",  POPR,  5, &cmd_pop_r},
-    {"JMP",   JMP,   3, &cmd_jmp},
-    {"JA",    JA,    2, &cmd_ja},
-    {"JAE",   JAE,   3, &cmd_jae},
-    {"JB",    JB,    2, &cmd_jb},
-    {"JBE",   JBE,   3, &cmd_jbe},
-    {"JE",    JE,    2, &cmd_je},
-    {"JNE",   JNE,   3, &cmd_jne},
-    {"IN",    IN,    2, &cmd_in},
-    {"CALL",  CALL,  4, &cmd_call},
-    {"RET",   RET,   3, &cmd_ret},
-    {"PUSHM", PUSHM, 5, NULL},
-    {"POPM",  POPM,  4, NULL},
-    {"POP",   POP,   3, &cmd_pop}
+    {"PUSH",  PUSH,  sizeof("PUSH"),  &cmd_push},
+    {"ADD",   ADD,   sizeof("ADD"),   &cmd_add},
+    {"SUB",   SUB,   sizeof("SUB"),   &cmd_sub},
+    {"DIV",   DIV,   sizeof("DIV"),   &cmd_div},
+    {"MUL",   MUL,   sizeof("MUL"),   &cmd_mul},
+    {"OUT",   OUT,   sizeof("OUT"),   &cmd_out},
+    {"HLT",   HLT,   sizeof("HLT"),   &cmd_hlt},
+    {"PUSHR", PUSHR, sizeof("PUSHR"), &cmd_push_r},
+    {"POPR",  POPR,  sizeof("POPR"),  &cmd_pop_r},
+    {"JMP",   JMP,   sizeof("JMP"),   &cmd_jmp},
+    {"JA",    JA,    sizeof("JA"),    &cmd_ja},
+    {"JAE",   JAE,   sizeof("JAE"),   &cmd_jae},
+    {"JB",    JB,    sizeof("JB"),    &cmd_jb},
+    {"JBE",   JBE,   sizeof("JBE"),   &cmd_jbe},
+    {"JE",    JE,    sizeof("JE"),    &cmd_je},
+    {"JNE",   JNE,   sizeof("JNE"),   &cmd_jne},
+    {"IN",    IN,    sizeof("IN"),    &cmd_in},
+    {"CALL",  CALL,  sizeof("CALL"),  &cmd_call},
+    {"RET",   RET,   sizeof("RET"),   &cmd_ret},
+    {"PUSHM", PUSHM, sizeof("PUSHM"), NULL},
+    {"POPM",  POPM,  sizeof("POPM"),  NULL},
+    {"POP",   POP,   sizeof("POP"),   &cmd_pop}
 };
 
 const reg_struct_t registers[] = {

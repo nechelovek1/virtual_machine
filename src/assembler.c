@@ -13,7 +13,7 @@ int translate_context_read_text(translate_ctx_t* ctx, FILE* fp)
     ctx->text = (textfile_t) {};
     read_text(fp, &(ctx->text));
     
-    ctx->bytecode = (int*) calloc(ctx->text.nLines * 3, sizeof(int));
+    ctx->bytecode = (int*) calloc(ctx->text.nLines * NUMS_PER_LINE, sizeof(int));
     ctx->labels = (label_t*) calloc(ctx->text.nLines, sizeof(label_t));
 
     ctx->labels_cnt = 0;
@@ -117,7 +117,7 @@ cmd_read_err_t read_cmd(translate_ctx_t* ctx, line_t cmd_line)
         case JE:
         case JNE:
         case CALL:
-            return read_jump(ctx, JNE, cmd_line, cmd_len);
+            return read_jump(ctx, cmd, cmd_line, cmd_len);
         default:
             return TRANSLATE_UNKNOWN_CMD;
     }
@@ -128,7 +128,9 @@ cmd_read_err_t read_cmd(translate_ctx_t* ctx, line_t cmd_line)
 int create_label(translate_ctx_t* ctx, int label_value, int label_address)
 {
     ctx->labels[ctx->labels_cnt] = (label_t) {label_value, label_address};
-    ctx->labels_cnt++;    
+    ctx->labels_cnt++;  
+    
+    return 0;
 }
 
 int find_label(translate_ctx_t* ctx, int label_value)
@@ -187,7 +189,7 @@ cmd_read_err_t read_jump(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_li
     }
     
     cmd_len += n;
-
+    //TODO добавить коментарии сделать метки строковыми
     if (cmd_line.line[cmd_len] == ':') {
         int label_idx = find_label(ctx, label_value);
         if (label_idx == -1) {
@@ -239,11 +241,13 @@ int translate_context_destroy(translate_ctx_t* ctx)
     free(ctx->labels);
     free(ctx->bytecode);
     *ctx = (translate_ctx_t){};
+
+    return 0;
 }
 
 cmd_read_err_t read_command_word(const char* line, size_t* cmd_len, command_t* cmd_code)
 {
-    char cmd_word[6] = "";
+    char cmd_word[MAX_CMD_LEN] = "";
     sscanf(line, "%5s", cmd_word);
     
     for (size_t i = 0; i < CMD_CNT; i++) {
@@ -255,4 +259,9 @@ cmd_read_err_t read_command_word(const char* line, size_t* cmd_len, command_t* c
     }
 
     return TRANSLATE_UNKNOWN_CMD;
+}
+
+void assembler_dump(translate_ctx_t* ctx)
+{
+
 }

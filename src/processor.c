@@ -13,8 +13,10 @@ int processor_read_bytecode(processor_t* proc, FILE* fp)
 {
     size_t bytecode_size = getFileSize(fp) / sizeof(stack_elem_t);
     proc->code_size = bytecode_size;
-    proc->code = calloc(bytecode_size, sizeof(stack_elem_t));
+    proc->code = (stack_elem_t*) calloc(bytecode_size, sizeof(stack_elem_t));
     fread(proc->code, sizeof(stack_elem_t), bytecode_size, fp);
+
+    return 0;
 }
 
 int processor_init(processor_t* proc)
@@ -28,6 +30,8 @@ int processor_init(processor_t* proc)
     for (size_t i = 0; i < CMD_CNT; i++) {
         proc->commands[commands[i].cmd_code] = commands[i].cmd_func;
     }
+
+    return 0;
 }
 
 int processor_loop(processor_t* proc)
@@ -51,6 +55,7 @@ int processor_loop(processor_t* proc)
 
         if (proc->commands[cmd](proc)) {
             printf("Segmentation fault! Failed to run command: %d\n", cmd);
+            printf("PC: %d\n", proc->pc);
             return -1;
         }
     }
@@ -60,7 +65,11 @@ int processor_loop(processor_t* proc)
 
 int processor_destroy(processor_t* proc)
 {
+    stack_destroy(&proc->stk);
+    stack_destroy(&proc->call_stk);
+    free(proc->code);
 
+    return 0;
 }
 
 int cmd_push(processor_t* proc)
@@ -420,4 +429,5 @@ int cmd_ret(processor_t* proc)
 int processor_dump(processor_t* proc)
 {
 
+    return 0;
 }

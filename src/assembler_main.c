@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
     textfile_t text = {};
     FILE* input_file = NULL;
     if ((input_file = fopen(argv[1], "r")) == NULL) {
-        printf("Failed to open %s", argv[1]);
+        printf("Failed to open %s\n", argv[1]);
         return -1;
     }
 

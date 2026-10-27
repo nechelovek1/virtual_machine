@@ -43,5 +43,6 @@ cmd_read_err_t read_command_word(const char* line, size_t* cmd_len, command_t* c
 int translate_context_read_text(translate_ctx_t* ctx, FILE* fp);
 int translate_context_destroy(translate_ctx_t* ctx);
 void print_labels(translate_ctx_t* ctx);
+void assembler_dump(translate_ctx_t* ctx);
 
 #endif

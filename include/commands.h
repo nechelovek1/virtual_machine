@@ -49,6 +49,8 @@ typedef struct {
 
 extern const size_t CMD_CNT;
 extern const size_t REGS_CNT;
+extern const size_t MAX_CMD_LEN;
+extern const size_t NUMS_PER_LINE;
 
 extern const cmd_struct_t commands[];
 extern const reg_struct_t registers[];
