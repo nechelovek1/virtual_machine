@@ -2,20 +2,18 @@
 
 #include "commands.h"
 
-const size_t CMD_CNT = 22;
-const size_t REGS_CNT = 4;
-const size_t MAX_CMD_LEN = 5;
-const size_t NUMS_PER_LINE = 3;
+//const size_t MAX_CMD_LEN = 5;
+//const size_t NUMS_PER_LINE = 3;
 
 //TODO добавить функцию парсер для комманды
-const cmd_struct_t commands[] = {
+const cmd_struct_t commands[CMD_CNT] = {
+    {"HLT",   HLT,   sizeof("HLT"),   &cmd_hlt},
     {"PUSH",  PUSH,  sizeof("PUSH"),  &cmd_push},
     {"ADD",   ADD,   sizeof("ADD"),   &cmd_add},
     {"SUB",   SUB,   sizeof("SUB"),   &cmd_sub},
     {"DIV",   DIV,   sizeof("DIV"),   &cmd_div},
     {"MUL",   MUL,   sizeof("MUL"),   &cmd_mul},
     {"OUT",   OUT,   sizeof("OUT"),   &cmd_out},
-    {"HLT",   HLT,   sizeof("HLT"),   &cmd_hlt},
     {"PUSHR", PUSHR, sizeof("PUSHR"), &cmd_push_r},
     {"POPR",  POPR,  sizeof("POPR"),  &cmd_pop_r},
     {"JMP",   JMP,   sizeof("JMP"),   &cmd_jmp},
@@ -33,7 +31,7 @@ const cmd_struct_t commands[] = {
     {"POP",   POP,   sizeof("POP"),   &cmd_pop}
 };
 
-const reg_struct_t registers[] = {
+const reg_struct_t registers[REGS_CNT] = {
     {"AX", AX},
     {"BX", BX},
     {"CX", CX},

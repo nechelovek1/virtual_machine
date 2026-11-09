@@ -1,21 +1,21 @@
 IN
-CALL 1:
+CALL fact:
 OUT
 HLT
 
-1:
+fact:
 POPR AX
 PUSH 0
 PUSHR AX
-JE 2:
+JE b_one:
 PUSHR AX
 PUSH 1
 PUSHR AX
 SUB
-CALL 1:
+CALL fact:
 MUL
 RET 
 
-2:
+b_one:
 PUSH 1
 RET

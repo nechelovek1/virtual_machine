@@ -3,7 +3,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-//#include "text.h"
 #include "text.h"
 #include "stack.h"
 #include "commands.h"
@@ -17,7 +16,6 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    textfile_t text = {};
     FILE* input_file = NULL;
     if ((input_file = fopen(argv[1], "r")) == NULL) {
         printf("Failed to open %s\n", argv[1]);
@@ -29,8 +27,20 @@ int main(int argc, char* argv[])
 
     fclose(input_file);
 
-    ctx.mode = true; //Первый проход
+    if (first_pass(&ctx) != TRANSLATE_OK) {
+        translate_context_destroy(&ctx);
+        return -1;
+    }
+
+    if (second_pass(&ctx) != TRANSLATE_OK) {
+        translate_context_destroy(&ctx);
+        return -1;
+    }
+    print_labels(&ctx);
+
+    /*ctx.mode = true; //Первый проход
     if (translate_text(&ctx) != TRANSLATE_OK) {
+        translate_context_destroy(&ctx);
         return -1;
     }
     print_labels(&ctx);
@@ -38,13 +48,15 @@ int main(int argc, char* argv[])
     ctx.bytecode_size = 0;
     ctx.mode = false; //Второй проход
     if (translate_text(&ctx) != TRANSLATE_OK) {
+        translate_context_destroy(&ctx);
         return -1;
     }
-    print_labels(&ctx);
+    print_labels(&ctx);*/
 
     FILE* out_file = NULL;
     if ((out_file = fopen(argv[2], "wb")) == NULL) {
         printf("Failed to open %s", argv[2]);
+        translate_context_destroy(&ctx);
         return -1;
     }
 

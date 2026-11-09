@@ -15,7 +15,6 @@ typedef struct _proc{
     stack_elem_t regs[4];
     stack_t call_stk;
     int pc;
-    int (*commands[256]) (struct _proc*);
 } processor_t;
 
 int processor_read_bytecode(processor_t* proc, FILE* fp);
@@ -44,6 +43,5 @@ int cmd_jne(processor_t* proc);
 int cmd_in(processor_t* proc);
 int cmd_call(processor_t* proc);
 int cmd_ret(processor_t* proc);
-
 
 #endif

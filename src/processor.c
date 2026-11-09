@@ -27,33 +27,27 @@ int processor_init(processor_t* proc)
     proc->call_stk = (stack_t) {};
     stack_init(&(proc->call_stk), STACK_MIN_CAPACITY ON_DBG(, __FILE__, __func__, __LINE__, "call_stk"));
 
-    for (size_t i = 0; i < CMD_CNT; i++) {
-        proc->commands[commands[i].cmd_code] = commands[i].cmd_func;
-    }
-
     return 0;
 }
 
 int processor_loop(processor_t* proc)
 {
-    while (true) {
+    int cmd = CMD_CNT;
+    while (cmd != HLT) {
         if (proc->pc > proc->code_size || proc->pc < 0) {
             printf("Segmentation fault! Invalide PC: %d\n", proc->pc);
             return -1;
         }
 
-        int cmd = proc->code[proc->pc];
-        if (cmd == HLT) {
-            return 0;
-        }
+        cmd = proc->code[proc->pc];
 
-        if (cmd < 0 || cmd >= MAX_CMD_NUM || proc->commands[cmd] == NULL) {
+        if (cmd < 0 || cmd >= CMD_CNT || commands[cmd].cmd_func  == NULL) {
             printf("Segmantation fault! Unknown cmd: %d\n", cmd);
             printf("PC: %d\n", proc->pc);
             return -1;
         }
 
-        if (proc->commands[cmd](proc)) {
+        if (commands[cmd].cmd_func(proc)) {
             printf("Segmentation fault! Failed to run command: %d\n", cmd);
             printf("PC: %d\n", proc->pc);
             return -1;

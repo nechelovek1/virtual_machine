@@ -12,7 +12,7 @@ int read_text(FILE* fp, textfile_t* textFile)
         return -1;
     }
 
-    size_t fileSize = getFileSize(fp) + 1;
+    size_t fileSize = getFileSize(fp) + 2;
 
     textFile->buffer = (char* ) calloc(fileSize, sizeof(char));
 
