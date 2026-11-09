@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
+#include <math.h>
 
 #include "processor.h"
 #include "stack.h"
@@ -40,6 +41,7 @@ int processor_loop(processor_t* proc)
         }
 
         cmd = proc->code[proc->pc];
+        printf("PC: %d, cmd: %d\n", proc->pc, cmd);
 
         if (cmd < 0 || cmd >= CMD_CNT || commands[cmd].cmd_func  == NULL) {
             printf("Segmantation fault! Unknown cmd: %d\n", cmd);
@@ -133,7 +135,11 @@ int cmd_div(processor_t* proc)
     }
     if (stack_pop(&(proc->stk), &b) == STACK_EMPTY) {
         return -1;
-    }   
+    }
+
+    if (b == 0) {
+        return -1;
+    }
 
     c = a / b;
     stack_push(&(proc->stk), c);
@@ -423,5 +429,20 @@ int cmd_ret(processor_t* proc)
 int processor_dump(processor_t* proc)
 {
 
+    return 0;
+}
+
+int cmd_sqrt(processor_t* proc)
+{
+    stack_elem_t elem = 0;
+    if (stack_pop(&(proc->stk), &elem) == STACK_EMPTY) {
+        return -1;
+    }
+
+    elem = (int) ((sqrt((double) elem / FLT_MULTIPLIER)) * FLT_MULTIPLIER);
+    stack_push(&(proc->stk), elem);
+
+    proc->pc++;
+    
     return 0;
 }

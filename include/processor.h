@@ -43,5 +43,6 @@ int cmd_jne(processor_t* proc);
 int cmd_in(processor_t* proc);
 int cmd_call(processor_t* proc);
 int cmd_ret(processor_t* proc);
+int cmd_sqrt(processor_t* proc);
 
 #endif

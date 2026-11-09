@@ -26,6 +26,7 @@ typedef enum {
     PUSHM,
     POPM,
     POP,
+    SQRT,
     CMD_CNT
 } command_t;
 
@@ -53,7 +54,8 @@ const size_t MAX_CMD_LEN = 5;
 const size_t MAX_REG_LEN = 2;
 const size_t NUMS_PER_LINE = 3;
 const size_t MAX_LABEL_LEN = 128;
-
+const size_t FLT_MULTIPLIER = 100;
+ 
 extern const cmd_struct_t commands[];
 extern const reg_struct_t registers[];
 

@@ -28,11 +28,14 @@ int main(int argc, char* argv[])
     fclose(input_file);
 
     if (first_pass(&ctx) != TRANSLATE_OK) {
+        print_labels(&ctx);
         translate_context_destroy(&ctx);
         return -1;
     }
+    print_labels(&ctx);
 
     if (second_pass(&ctx) != TRANSLATE_OK) {
+        print_labels(&ctx);
         translate_context_destroy(&ctx);
         return -1;
     }

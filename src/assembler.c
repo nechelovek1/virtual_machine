@@ -20,6 +20,8 @@ int translate_context_read_text(translate_ctx_t* ctx, FILE* fp)
     ctx->bytecode_size = 0;
     ctx->pc = 0;
 
+    ASM_LOG("[LOG]: Translate context created\n")
+
     return 0;
 }
 
@@ -76,6 +78,7 @@ cmd_read_err_t read_cmd(translate_ctx_t* ctx, line_t cmd_line)
         case OUT:
         case RET:
         case HLT:
+        case SQRT:
             return read_cmd_without_args(ctx, cmd_code, cmd_line, cmd_len);
         case JMP:
         case JA:
@@ -97,6 +100,7 @@ int create_label(translate_ctx_t* ctx, const char* label_value, int label_addres
 {
     char* label_val_dup = strdup(label_value);
     ctx->labels[ctx->labels_cnt] = (label_t) {label_val_dup, label_address};
+    ASM_LOG("[LOG]: Label %s with address %d created\n", label_value, label_address)
     ctx->labels_cnt++;  
     
     return 0;
@@ -150,6 +154,7 @@ cmd_read_err_t read_label(translate_ctx_t* ctx, line_t label_line, int label_add
 cmd_read_err_t read_jump(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_line, size_t cmd_len)
 {
     ctx->bytecode[ctx->pc] = cmd_code;
+    ASM_LOG("[LOG]: Command %d wrote to %d\n", cmd_code, ctx->pc)
     ctx->pc++;
 
     int n = 0;
@@ -164,18 +169,18 @@ cmd_read_err_t read_jump(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_li
     //TODO добавить коментарии
     if (cmd_line.line[cmd_len - 1] == ':') {
         int label_idx = find_label(ctx, label_value);
-        if (label_idx == -1) {
-            if (ctx->mode) {
-                create_label(ctx, label_value, -1);
-            } else {
-                return TRANSLATE_BAD_LABEL;
-            }
-        } else if (ctx->labels[label_idx].address == -1){
-            return TRANSLATE_BAD_LABEL;
+        if (label_idx == -1 && ctx->mode) {
+            create_label(ctx, label_value, -1);
+            ctx->bytecode[ctx->pc] = -1;
+            ASM_LOG("[LOG]: address %d from label %s wrote to %d\n", -1, label_value, ctx->pc)
+        } else if (ctx->mode || (ctx->labels[label_idx].address != -1 && !ctx->mode)){
+            ctx->bytecode[ctx->pc] = ctx->labels[label_idx].address;
+            ASM_LOG("[LOG]: address %d from label %s wrote to %d\n", ctx->labels[label_idx].address, label_value, ctx->pc)
         } else {
-           ctx->bytecode[ctx->pc] = ctx->labels[label_idx].address;
+            return TRANSLATE_BAD_LABEL;
         }
     } else {
+        //TODO чтение адреса напрямую
         return TRANSLATE_BAD_LABEL;
     }
     ctx->pc++;
@@ -193,6 +198,7 @@ cmd_read_err_t read_register(int* reg, line_t cmd_line, size_t* cmd_len)
 
     for (size_t i = 0; i < REGS_CNT; i++) {
         if (!strcmp(reg_name, registers[i].reg_name)) {
+            ASM_LOG("[LOG]: Found register %s with code %lu\n", reg_name, i)
             *reg = registers[i].reg_val;
             return TRANSLATE_OK;
         }
@@ -215,6 +221,8 @@ int translate_context_destroy(translate_ctx_t* ctx)
     free(ctx->bytecode);
     freeTextFile(&ctx->text);
     *ctx = (translate_ctx_t){};
+    
+    ASM_LOG("[LOG]: Aseembler context destroyed\n")
 
     return 0;
 }
@@ -226,6 +234,7 @@ cmd_read_err_t read_command_word(const char* line, size_t* cmd_len, command_t* c
     
     for (size_t i = 0; i < CMD_CNT; i++) {
         if (!strcmp(cmd_word, commands[i].cmd_word)) {
+            ASM_LOG("[LOG]: Found command %s, code: %d\n", cmd_word, i)
             *cmd_len = commands[i].cmd_word_len;
             *cmd_code = commands[i].cmd_code;
             return TRANSLATE_OK;
@@ -238,6 +247,7 @@ cmd_read_err_t read_command_word(const char* line, size_t* cmd_len, command_t* c
 cmd_read_err_t read_push(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_line, size_t cmd_len)
 {
     ctx->bytecode[ctx->pc] = cmd_code;
+    ASM_LOG("[LOG]: Command %d wrote to %lu\n", cmd_code, ctx->pc)
     ctx->pc++;
 
     int elem = 0; int n = 0;
@@ -249,6 +259,7 @@ cmd_read_err_t read_push(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_li
     }
 
     ctx->bytecode[ctx->pc] = elem;
+    ASM_LOG("[LOG]: Arg %d wrote to %lu\n", cmd_code, ctx->pc)
     ctx->pc++;
     
     return TRANSLATE_OK;
@@ -257,7 +268,9 @@ cmd_read_err_t read_push(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_li
 cmd_read_err_t read_pushr_popr(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_line, size_t cmd_len)
 {
     ctx->bytecode[ctx->pc] = cmd_code;
+    ASM_LOG("[LOG]: Command %d writed to %lu\n", cmd_code, ctx->pc)
     ctx->pc++;
+    
     if (read_register(&ctx->bytecode[ctx->pc], cmd_line, &cmd_len)) {
         return TRANSLATE_UNKNOWN_REG;
     }
@@ -269,23 +282,50 @@ cmd_read_err_t read_pushr_popr(translate_ctx_t* ctx, command_t cmd_code, line_t 
 cmd_read_err_t read_cmd_without_args(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_line, size_t cmd_len)
 {
     ctx->bytecode[ctx->pc] = cmd_code;
+    ASM_LOG("[LOG]: Command %d writed to %lu\n", cmd_code, ctx->pc)
     ctx->pc++;
+    
     return TRANSLATE_OK;
 }
 
 cmd_read_err_t first_pass(translate_ctx_t* ctx)
 {
+    ASM_LOG("[LOG]: First pass started\n")
+
     ctx->mode = true; //Первый проход
     cmd_read_err_t res = translate_text(ctx);
     ctx->bytecode_size = ctx->pc;
+
+    ON_ASM_DBG(
+        if (res == TRANSLATE_OK) {
+            ASM_LOG("[LOG]: First pass done\n")
+        } else {
+            ASM_LOG("[LOG]: First pass done with error\n")
+            print_assembler_error(res);
+        }
+    )
+
     return res;
 }
 
 cmd_read_err_t second_pass(translate_ctx_t* ctx)
 {
+    ASM_LOG("\n\n[LOG]: Second pass started\n")
+
     ctx->pc = 0;
     ctx->mode = false; //Второй проход
-    return translate_text(ctx);
+    cmd_read_err_t res = translate_text(ctx);
+
+    ON_ASM_DBG(
+        if (res == TRANSLATE_OK) {
+            ASM_LOG("[LOG]: Second pass done\n")
+        } else {
+            ASM_LOG("[LOG]: Second pass done with error\n")
+            print_assembler_error(res);
+        }
+    )
+
+    return res;
 }
 
 void labels_destroy(translate_ctx_t* ctx) 
@@ -297,6 +337,11 @@ void labels_destroy(translate_ctx_t* ctx)
 }
 
 void assembler_dump(translate_ctx_t* ctx)
+{
+
+}
+
+void print_assembler_error(cmd_read_err_t err)
 {
 
 }

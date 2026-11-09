@@ -2,9 +2,20 @@
 #define ASSEMBLER_H
 
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "text.h"
 #include "commands.h"
+
+#define ASM_DEBUG
+
+#ifdef ASM_DEBUG
+#define ON_ASM_DBG(...) __VA_ARGS__
+#define ASM_LOG(...) fprintf(stderr, __VA_ARGS__);
+#else
+#define ON_ASM_DBG(...)
+#define ASM_LOG(...)
+#endif
 
 typedef enum {
     TRANSLATE_OK,
@@ -51,5 +62,6 @@ int translate_context_destroy(translate_ctx_t* ctx);
 void print_labels(translate_ctx_t* ctx);
 void labels_destroy(translate_ctx_t* ctx);
 void assembler_dump(translate_ctx_t* ctx);
+void print_assembler_error(cmd_read_err_t err);
 
 #endif

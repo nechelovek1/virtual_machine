@@ -28,7 +28,8 @@ const cmd_struct_t commands[CMD_CNT] = {
     {"RET",   RET,   sizeof("RET"),   &cmd_ret},
     {"PUSHM", PUSHM, sizeof("PUSHM"), NULL},
     {"POPM",  POPM,  sizeof("POPM"),  NULL},
-    {"POP",   POP,   sizeof("POP"),   &cmd_pop}
+    {"POP",   POP,   sizeof("POP"),   &cmd_pop},
+    {"SQRT",  SQRT,  sizeof("SQRT"),  &cmd_sqrt}
 };
 
 const reg_struct_t registers[REGS_CNT] = {
