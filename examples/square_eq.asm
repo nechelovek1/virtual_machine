@@ -84,8 +84,7 @@ ADD
 CALL div_flt:
 RET
 
-
-calc_x2:
+calc_x2: 
 SQRT
 POPR DX
 POPR BX
@@ -114,3 +113,5 @@ PUSH 100
 MUL
 DIV
 RET
+
+;ha ha penis

@@ -43,11 +43,13 @@ typedef struct {
     bool mode;
 } translate_ctx_t;
 
+const char COMENT_CHAR = ';';
 
 cmd_read_err_t translate_text(translate_ctx_t* ctx);
 cmd_read_err_t read_cmd(translate_ctx_t* ctx, line_t cmd_line);
 int find_label(translate_ctx_t* ctx, const char* label_value);
 cmd_read_err_t read_label(translate_ctx_t* ctx, line_t label_line, int label_address);
+cmd_read_err_t read_coment(line_t coment_line);
 int create_label(translate_ctx_t* ctx, const char* label_value, int label_address);
 cmd_read_err_t read_jump(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_line, size_t cmd_len);
 cmd_read_err_t read_push(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_line, size_t cmd_len);
@@ -63,5 +65,6 @@ void print_labels(translate_ctx_t* ctx);
 void labels_destroy(translate_ctx_t* ctx);
 void assembler_dump(translate_ctx_t* ctx);
 void print_assembler_error(cmd_read_err_t err);
+bool is_end_valid(const char* s, int offset);
 
 #endif

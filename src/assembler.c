@@ -34,15 +34,18 @@ cmd_read_err_t translate_text(translate_ctx_t* ctx)
             continue;
         }
         
-        cmd_read_err_t cmd_res = read_cmd(ctx, cmd_line);
+        cmd_read_err_t res = read_cmd(ctx, cmd_line);
 
-        if (cmd_res == TRANSLATE_OK) {
+        if (res == TRANSLATE_OK) {
             continue;
-        } else if (!read_label(ctx, cmd_line, ctx->pc)) {
+        } else if (read_label(ctx, cmd_line, ctx->pc) == TRANSLATE_OK) {
+            continue;
+        } else if (read_coment(cmd_line) == TRANSLATE_OK) {
             continue;
         } else {
-            printf("Error %d on line %ld\n", cmd_res, i + 1);
-            return cmd_res;
+            printf("Error %d on line %ld\n", res, i + 1);
+            print_assembler_error(res);
+            return res;
         }
     }
 
@@ -151,6 +154,14 @@ cmd_read_err_t read_label(translate_ctx_t* ctx, line_t label_line, int label_add
     return TRANSLATE_LABEL_EXIST;
 }
 
+cmd_read_err_t read_coment(line_t coment_line)
+{
+    if (!is_end_valid(coment_line.line, 0)) {
+        return TRANSLATE_UNKNOWN_CMD;
+    } 
+    return TRANSLATE_OK;
+}
+
 cmd_read_err_t read_jump(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_line, size_t cmd_len)
 {
     ctx->bytecode[ctx->pc] = cmd_code;
@@ -185,19 +196,20 @@ cmd_read_err_t read_jump(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_li
     }
     ctx->pc++;
 
+    if (!is_end_valid(cmd_line.line, cmd_len)) {
+        return TRANSLATE_TOO_MANY_ARGS;
+    }
+
     return TRANSLATE_OK;
 }
 
 cmd_read_err_t read_register(int* reg, line_t cmd_line, size_t* cmd_len)
 {
     char reg_name[MAX_REG_LEN + 1] = "";
-    char coment_start = '\0';
+    int n = 0;
 
-    int res = sscanf(cmd_line.line + *cmd_len, "%2s %c", reg_name, &coment_start);
-    
-    if (res == 2 && coment_start != ';') {
-        return TRANSLATE_TOO_MANY_ARGS;
-    }
+    sscanf(cmd_line.line + *cmd_len, "%2s%n", reg_name, &n);
+    *cmd_len += n;
 
     for (size_t i = 0; i < REGS_CNT; i++) {
         if (!strcmp(reg_name, registers[i].reg_name)) {
@@ -253,10 +265,10 @@ cmd_read_err_t read_push(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_li
     ASM_LOG("[LOG]: Command %d write to %lu\n", cmd_code, ctx->pc)
     ctx->pc++;
 
-    int elem = 0; int n = 0;
-
+    int elem = 0, n = 0;
     int res = sscanf(cmd_line.line + cmd_len, "%d%n", &elem, &n);
     cmd_len += n;
+    
     if (res != 1) {
         return TRANSLATE_MISSING_ARGS;
     }
@@ -264,6 +276,10 @@ cmd_read_err_t read_push(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_li
     ctx->bytecode[ctx->pc] = elem;
     ASM_LOG("[LOG]: Arg %d write to %lu\n", cmd_code, ctx->pc)
     ctx->pc++;
+
+    if (!is_end_valid(cmd_line.line, cmd_len)) {
+        return TRANSLATE_TOO_MANY_ARGS;
+    }
     
     return TRANSLATE_OK;
 }
@@ -278,6 +294,10 @@ cmd_read_err_t read_pushr_popr(translate_ctx_t* ctx, command_t cmd_code, line_t 
         return TRANSLATE_UNKNOWN_REG;
     }
     ctx->pc++;
+
+    if (!is_end_valid(cmd_line.line, cmd_len)) {
+        return TRANSLATE_TOO_MANY_ARGS;
+    }
     
     return TRANSLATE_OK;
 }
@@ -287,6 +307,10 @@ cmd_read_err_t read_cmd_without_args(translate_ctx_t* ctx, command_t cmd_code, l
     ctx->bytecode[ctx->pc] = cmd_code;
     ASM_LOG("[LOG]: Command %d write to %lu\n", cmd_code, ctx->pc)
     ctx->pc++;
+
+    if (!is_end_valid(cmd_line.line, cmd_len)) {
+        return TRANSLATE_TOO_MANY_ARGS;
+    }
     
     return TRANSLATE_OK;
 }
@@ -369,4 +393,11 @@ void print_assembler_error(cmd_read_err_t err)
             fprintf(stderr, "[LOG]: OK\n");
             break;
     }
+}
+
+bool is_end_valid(const char* s, int offset)
+{
+    char c = '\0';
+    int res = sscanf(s + offset, " %c", &c);
+    return (res == 1 && c == COMENT_CHAR) || (res == -1);
 }
