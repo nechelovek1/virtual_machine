@@ -154,7 +154,7 @@ cmd_read_err_t read_label(translate_ctx_t* ctx, line_t label_line, int label_add
 cmd_read_err_t read_jump(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_line, size_t cmd_len)
 {
     ctx->bytecode[ctx->pc] = cmd_code;
-    ASM_LOG("[LOG]: Command %d wrote to %d\n", cmd_code, ctx->pc)
+    ASM_LOG("[LOG]: Command %d write to %d\n", cmd_code, ctx->pc)
     ctx->pc++;
 
     int n = 0;
@@ -172,10 +172,10 @@ cmd_read_err_t read_jump(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_li
         if (label_idx == -1 && ctx->mode) {
             create_label(ctx, label_value, -1);
             ctx->bytecode[ctx->pc] = -1;
-            ASM_LOG("[LOG]: address %d from label %s wrote to %d\n", -1, label_value, ctx->pc)
+            ASM_LOG("[LOG]: address %d from label %s write to %d\n", -1, label_value, ctx->pc)
         } else if (ctx->mode || (ctx->labels[label_idx].address != -1 && !ctx->mode)){
             ctx->bytecode[ctx->pc] = ctx->labels[label_idx].address;
-            ASM_LOG("[LOG]: address %d from label %s wrote to %d\n", ctx->labels[label_idx].address, label_value, ctx->pc)
+            ASM_LOG("[LOG]: address %d from label %s write to %d\n", ctx->labels[label_idx].address, label_value, ctx->pc)
         } else {
             return TRANSLATE_BAD_LABEL;
         }
@@ -191,10 +191,13 @@ cmd_read_err_t read_jump(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_li
 cmd_read_err_t read_register(int* reg, line_t cmd_line, size_t* cmd_len)
 {
     char reg_name[MAX_REG_LEN + 1] = "";
-    int n = 0;
+    char coment_start = '\0';
 
-    sscanf(cmd_line.line + *cmd_len, "%2s%n", reg_name, &n);
-    *cmd_len += n;
+    int res = sscanf(cmd_line.line + *cmd_len, "%2s %c", reg_name, &coment_start);
+    
+    if (res == 2 && coment_start != ';') {
+        return TRANSLATE_TOO_MANY_ARGS;
+    }
 
     for (size_t i = 0; i < REGS_CNT; i++) {
         if (!strcmp(reg_name, registers[i].reg_name)) {
@@ -247,7 +250,7 @@ cmd_read_err_t read_command_word(const char* line, size_t* cmd_len, command_t* c
 cmd_read_err_t read_push(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_line, size_t cmd_len)
 {
     ctx->bytecode[ctx->pc] = cmd_code;
-    ASM_LOG("[LOG]: Command %d wrote to %lu\n", cmd_code, ctx->pc)
+    ASM_LOG("[LOG]: Command %d write to %lu\n", cmd_code, ctx->pc)
     ctx->pc++;
 
     int elem = 0; int n = 0;
@@ -259,7 +262,7 @@ cmd_read_err_t read_push(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_li
     }
 
     ctx->bytecode[ctx->pc] = elem;
-    ASM_LOG("[LOG]: Arg %d wrote to %lu\n", cmd_code, ctx->pc)
+    ASM_LOG("[LOG]: Arg %d write to %lu\n", cmd_code, ctx->pc)
     ctx->pc++;
     
     return TRANSLATE_OK;
@@ -268,7 +271,7 @@ cmd_read_err_t read_push(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_li
 cmd_read_err_t read_pushr_popr(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_line, size_t cmd_len)
 {
     ctx->bytecode[ctx->pc] = cmd_code;
-    ASM_LOG("[LOG]: Command %d writed to %lu\n", cmd_code, ctx->pc)
+    ASM_LOG("[LOG]: Command %d write to %lu\n", cmd_code, ctx->pc)
     ctx->pc++;
     
     if (read_register(&ctx->bytecode[ctx->pc], cmd_line, &cmd_len)) {
@@ -282,7 +285,7 @@ cmd_read_err_t read_pushr_popr(translate_ctx_t* ctx, command_t cmd_code, line_t 
 cmd_read_err_t read_cmd_without_args(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_line, size_t cmd_len)
 {
     ctx->bytecode[ctx->pc] = cmd_code;
-    ASM_LOG("[LOG]: Command %d writed to %lu\n", cmd_code, ctx->pc)
+    ASM_LOG("[LOG]: Command %d write to %lu\n", cmd_code, ctx->pc)
     ctx->pc++;
     
     return TRANSLATE_OK;
@@ -338,10 +341,32 @@ void labels_destroy(translate_ctx_t* ctx)
 
 void assembler_dump(translate_ctx_t* ctx)
 {
-
+    print_labels(ctx);
 }
 
 void print_assembler_error(cmd_read_err_t err)
 {
-
+    switch(err) {
+        case TRANSLATE_TOO_MANY_ARGS:
+            fprintf(stderr, "[ERROR]: Too many args\n");
+            break;
+        case TRANSLATE_MISSING_ARGS:
+            fprintf(stderr, "[ERROR]: Missing args\n");
+            break;
+        case TRANSLATE_UNKNOWN_CMD:
+            fprintf(stderr, "[ERROR]: Unknown command name\n");
+            break;
+        case TRANSLATE_UNKNOWN_REG:
+            fprintf(stderr, "[ERROR]: Unknown register name\n");
+            break;
+        case TRANSLATE_BAD_LABEL:
+            fprintf(stderr, "[ERROR]: Failed to read label\n");
+            break;
+        case TRANSLATE_LABEL_EXIST:
+            fprintf(stderr, "[ERROR]: Reapeted defenition of label\n");
+            break;
+        case TRANSLATE_OK:
+            fprintf(stderr, "[LOG]: OK\n");
+            break;
+    }
 }

@@ -42,7 +42,7 @@ typedef struct {
     const char* cmd_word;
     command_t cmd_code;
     size_t cmd_word_len;
-    int (*cmd_func) (struct _proc*);
+    processor_err_t (*cmd_func) (struct _proc*);
 } cmd_struct_t;
 
 typedef struct {
