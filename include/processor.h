@@ -14,6 +14,8 @@ typedef struct _proc{
     size_t code_size;
     stack_elem_t regs[4];
     stack_t call_stk;
+    stack_elem_t *ram;
+    size_t ram_size;
     int pc;
 } processor_t;
 
@@ -24,6 +26,7 @@ typedef enum {
     PROCESSOR_DIVISION_BY_ZERO,
     PROCESSOR_SEGMENTATION_FAULT,
     PROCESSOR_UNKNOWN_REG,
+    PROCESSOR_OUT_OF_MEMORY
 } processor_err_t;
 
 int processor_read_bytecode(processor_t* proc, FILE* fp);
@@ -53,5 +56,7 @@ processor_err_t cmd_in(processor_t* proc);
 processor_err_t cmd_call(processor_t* proc);
 processor_err_t cmd_ret(processor_t* proc);
 processor_err_t cmd_sqrt(processor_t* proc);
+processor_err_t cmd_push_new(processor_t* proc);
+processor_err_t cmd_pop_new(processor_t* proc);
 
 #endif

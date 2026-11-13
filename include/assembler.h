@@ -24,7 +24,7 @@ typedef enum {
     TRANSLATE_UNKNOWN_CMD,
     TRANSLATE_UNKNOWN_REG,
     TRANSLATE_BAD_LABEL,
-    TRANSLATE_LABEL_EXIST
+    TRANSLATE_LABEL_EXIST,
 } cmd_read_err_t;
 
 
@@ -42,6 +42,13 @@ typedef struct {
     size_t pc;
     bool mode;
 } translate_ctx_t;
+
+typedef struct {
+    int memory:1;
+    int reg:1;
+    int count:1;
+    int command:5;
+} command_bits_t;
 
 const char COMENT_CHAR = ';';
 
@@ -65,6 +72,9 @@ void print_labels(translate_ctx_t* ctx);
 void labels_destroy(translate_ctx_t* ctx);
 void assembler_dump(translate_ctx_t* ctx);
 void print_assembler_error(cmd_read_err_t err);
+cmd_read_err_t read_push_new(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_line, size_t cmd_len);
+cmd_read_err_t read_pop_new(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_line, size_t cmd_len);
+cmd_read_err_t get_reg_val(const char* reg_name, int *reg_val);
 bool is_end_valid(const char* s, int offset);
 
 #endif

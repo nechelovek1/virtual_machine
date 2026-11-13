@@ -40,8 +40,7 @@ int processor_loop(processor_t* proc)
             return -1;
         }
 
-        cmd = proc->code[proc->pc];
-        //printf("PC: %d, cmd: %d\n", proc->pc, cmd);
+        cmd = proc->code[proc->pc] & 0x1f;
 
         if (cmd < 0 || cmd >= CMD_CNT || commands[cmd].cmd_func  == NULL) {
             printf("Segmantation fault! Unknown cmd: %d\n", cmd);
@@ -49,11 +48,15 @@ int processor_loop(processor_t* proc)
             return -1;
         }
 
+        //processor_dump(proc);
+        //getchar();
+
         if (commands[cmd].cmd_func(proc)) {
             printf("Segmentation fault! Failed to run command: %d\n", cmd);
             printf("PC: %d\n", proc->pc);
             return -1;
         }
+
     }
 
     return 0;
@@ -443,7 +446,7 @@ processor_err_t cmd_sqrt(processor_t* proc)
 
 void processor_dump(processor_t* proc)
 {
-    const int PROC_CODE_DUMP_SIZE = 10;
+    const int PROC_CODE_DUMP_SIZE = 7;
     fprintf(stderr, "Processor stack:\n");
     stack_dump(&(proc->stk));
     fprintf(stderr, "Processor call stack:\n");
@@ -451,42 +454,127 @@ void processor_dump(processor_t* proc)
     fprintf(stderr, "Processor registers:\n");
 
     for (int i = 0; i < REGS_CNT; i++) {
-        fprintf(stderr, "%-10s ", registers[i].reg_name);
+        fprintf(stderr, "%-7s ", registers[i].reg_name);
     }
     fputc('\n', stderr);
 
     for (int i = 0; i < REGS_CNT; i++) {
-        fprintf(stderr, "%-10d ", proc->regs[i]);
+        fprintf(stderr, "%-7d ", proc->regs[i]);
     }
     fputc('\n', stderr);
+    fprintf(stderr, "Processor code segment\n");
 
     for (int i = proc->pc - PROC_CODE_DUMP_SIZE; i < proc->pc + PROC_CODE_DUMP_SIZE; i++) {
         if (i >= 0) {
-            fprintf(stderr, "%-10d ", i);
+            fprintf(stderr, "%-7d ", i);
         }
     }
     fputc('\n', stderr);
 
     for (int i = proc->pc - PROC_CODE_DUMP_SIZE; i < proc->pc + PROC_CODE_DUMP_SIZE; i++) {
-        if (i >= 0) {
-            fprintf(stderr, "%-10d ", proc->code[i]);
+        if (i >= 0 && i < proc->code_size) {
+            fprintf(stderr, "%-7d ", proc->code[i]);
         }
     }
     fputc('\n', stderr);
 
     for (int i = proc->pc - PROC_CODE_DUMP_SIZE; i < proc->pc + PROC_CODE_DUMP_SIZE; i++) {
-        if (i >= 0 && i == proc->pc) {
-            fprintf(stderr, "%-10s ", "^");
-        } else if (i >= 0) {
-            fprintf(stderr, "%-10s ", " ");
+        if (i >= 0 && i == proc->pc && i < proc->code_size) {
+            fprintf(stderr, "%-7s ", "^");
+        } else if (i >= 0 && i < proc->code_size) {
+            fprintf(stderr, "%-7s ", " ");
         }
     }
     fputc('\n', stderr);
 
     int cmd = proc->code[proc->pc];
-    if (cmd >= 0 && cmd < MAX_CMD_LEN) {
-        fprintf(stderr, "Current command: %d - %s", commands[cmd].cmd_code, commands[cmd].cmd_word);
+    if (cmd >= 0 && cmd < CMD_CNT) {
+        fprintf(stderr, "Current command: %d - %s\n", commands[cmd].cmd_code, commands[cmd].cmd_word);
     } else {
         fprintf(stderr, "Current command: %d - Unknown command\n", cmd);
     }
+}
+
+processor_err_t cmd_push_new(processor_t* proc)
+{
+    stack_elem_t cmd = proc->code[proc->pc];
+    proc->pc++;
+
+    stack_elem_t res = 0;
+    if (cmd & 0x20) {
+        res += proc->code[proc->pc];
+        proc->pc++;
+    }
+
+    if (cmd & 0x40) {
+        stack_elem_t reg = proc->code[proc->pc]; 
+        proc->pc++;
+
+        if (reg > REGS_CNT || reg < 0) {
+            return PROCESSOR_UNKNOWN_REG;
+        }
+
+        res += proc->regs[reg];
+    }
+
+    if (cmd & 0x80) {
+        if (res > proc->ram_size || res < 0) {
+            return PROCESSOR_OUT_OF_MEMORY;
+        }
+
+        res = proc->ram[res];
+    }
+
+    stack_push(&(proc->stk), res);
+
+    return PROCESSOR_OK;
+}
+
+processor_err_t cmd_pop_new(processor_t* proc)
+{
+    stack_elem_t cmd = proc->code[proc->pc];
+    proc->pc++;
+
+    stack_elem_t elem = 0;
+    if (stack_pop(&(proc->stk), &elem)) {
+        return PROCESSOR_STACK_UNDERFLOW;
+    }
+
+    int addr = 0;
+    if (cmd & 0x80) {
+        if (cmd & 0x20) {
+            addr += proc->code[proc->pc];
+            proc->pc++;
+        }
+
+        if (cmd & 0x40) {
+            stack_elem_t reg = proc->code[proc->pc]; 
+            proc->pc++;
+
+            if (reg > REGS_CNT || reg < 0) {
+                return PROCESSOR_UNKNOWN_REG;
+            }
+
+            addr += proc->regs[reg];
+        }
+
+        if (addr > proc->ram_size || addr < 0) {
+            return PROCESSOR_OUT_OF_MEMORY;
+        }
+
+        proc->ram[addr] = elem;
+    } else if (cmd & 0x40 && !(cmd & 0x20)) {
+        stack_elem_t reg = proc->code[proc->pc]; 
+        proc->pc++;
+
+        if (reg > REGS_CNT || reg < 0) {
+            return PROCESSOR_UNKNOWN_REG;
+        }
+
+        proc->regs[reg] = elem;
+    } else if (!(cmd & 0x40) && cmd & 0x20) {
+        return PROCESSOR_OK;
+    } 
+
+    return PROCESSOR_SEGMENTATION_FAULT; //TODO добавить команду с некорректными опциями
 }

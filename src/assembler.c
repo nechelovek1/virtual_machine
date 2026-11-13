@@ -183,9 +183,11 @@ cmd_read_err_t read_jump(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_li
         if (label_idx == -1 && ctx->mode) {
             create_label(ctx, label_value, -1);
             ctx->bytecode[ctx->pc] = -1;
+
             ASM_LOG("[LOG]: address %d from label %s write to %d\n", -1, label_value, ctx->pc)
         } else if (ctx->mode || (ctx->labels[label_idx].address != -1 && !ctx->mode)){
             ctx->bytecode[ctx->pc] = ctx->labels[label_idx].address;
+            
             ASM_LOG("[LOG]: address %d from label %s write to %d\n", ctx->labels[label_idx].address, label_value, ctx->pc)
         } else {
             return TRANSLATE_BAD_LABEL;
@@ -400,4 +402,68 @@ bool is_end_valid(const char* s, int offset)
     char c = '\0';
     int res = sscanf(s + offset, " %c", &c);
     return (res == 1 && c == COMENT_CHAR) || (res == -1);
+}
+
+cmd_read_err_t read_push_pop(translate_ctx_t* ctx, command_t cmd_code, line_t cmd_line, size_t cmd_len)
+{
+    char reg_name[MAX_REG_LEN + 1] = "";
+    int count = 0, reg_val = 0, n = 0;
+    char endc = '\0';
+    
+    int cmd_code_with_bits = cmd_code;
+
+    //TODO сделать "умное чтение"
+    if (sscanf(cmd_line.line + cmd_len, "[ %2[A-DX] + %d %c%n", reg_name, &count, &endc, &n) == 3 && endc == ']') {
+        cmd_code_with_bits |= 0x80;
+        cmd_code_with_bits |= 0x40;
+        cmd_code_with_bits |= 0x20;
+    } else if (sscanf(cmd_line.line + cmd_len, "[ %2[A-DX] %c%n", reg_name, &endc, &n) == 2 && endc == ']') {
+        cmd_code_with_bits |= 0x80;
+        cmd_code_with_bits |= 0x40;    
+    } else if (sscanf(cmd_line.line + cmd_len, "[ %d %c%n", reg_name, &count, &endc, &n) == 2 && endc == ']') {
+        cmd_code_with_bits |= 0x80;
+        cmd_code_with_bits |= 0x20;        
+    } else if (sscanf(cmd_line.line + cmd_len, " %2[A-DX]%n", reg_name, &n) == 1) {
+        cmd_code_with_bits |= 0x40; 
+    } else if (sscanf(cmd_line.line + cmd_len, "%d%n", &count, &n) == 1 && cmd_code == PUSH) {
+        cmd_code_with_bits |= 0x20;
+    } else if (!is_end_valid(cmd_line.line, cmd_len) || cmd_code != POP) {
+        return TRANSLATE_TOO_MANY_ARGS;
+    }
+    
+    cmd_len += n;
+    if (!is_end_valid(cmd_line.line, cmd_len)) {
+        return TRANSLATE_TOO_MANY_ARGS;
+    }
+
+    ctx->bytecode[ctx->pc] = cmd_code_with_bits;
+    ctx->pc++;
+
+    if (cmd_code_with_bits & 0x20) {
+        ctx->bytecode[ctx->pc] = count;
+        ctx->pc++;
+    }
+
+    if (cmd_code_with_bits & 0x40) {
+        if (get_reg_val(cmd_line.line, &reg_val) != TRANSLATE_OK) {
+            return TRANSLATE_UNKNOWN_REG;
+        }
+        ctx->bytecode[ctx->pc] = reg_val;
+        ctx->pc++;
+    }
+
+    return TRANSLATE_OK;
+}
+
+cmd_read_err_t get_reg_val(const char* reg_name, int *reg_val)
+{
+    for (size_t i = 0; i < REGS_CNT; i++) {
+        if (!strcmp(reg_name, registers[i].reg_name)) {
+            ASM_LOG("[LOG]: Found register %s with code %lu\n", reg_name, i)
+            *reg_val = registers[i].reg_val;
+            return TRANSLATE_OK;
+        }
+    }
+
+    return TRANSLATE_UNKNOWN_REG;
 }
