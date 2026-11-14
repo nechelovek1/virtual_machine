@@ -12,7 +12,7 @@ typedef struct _proc{
     stack_t stk;
     stack_elem_t* code;
     size_t code_size;
-    stack_elem_t regs[4];
+    stack_elem_t regs[8];
     stack_t call_stk;
     stack_elem_t *ram;
     size_t ram_size;
@@ -24,13 +24,14 @@ typedef enum {
     PROCESSOR_STACK_UNDERFLOW,
     PROCESSOR_CALL_STACK_UNDERFLOW,
     PROCESSOR_DIVISION_BY_ZERO,
-    PROCESSOR_SEGMENTATION_FAULT,
+    PROCESSOR_OUT_OF_CODE,
     PROCESSOR_UNKNOWN_REG,
-    PROCESSOR_OUT_OF_MEMORY
+    PROCESSOR_OUT_OF_MEMORY,
+    PROCESSOR_BAD_BIT_FIELDS
 } processor_err_t;
 
 int processor_read_bytecode(processor_t* proc, FILE* fp);
-int processor_init(processor_t* proc);
+int processor_init(processor_t* proc, size_t ram_size);
 int processor_loop(processor_t* proc);
 int processor_destroy(processor_t* proc);
 void processor_dump(processor_t* proc);
@@ -58,5 +59,6 @@ processor_err_t cmd_ret(processor_t* proc);
 processor_err_t cmd_sqrt(processor_t* proc);
 processor_err_t cmd_push_new(processor_t* proc);
 processor_err_t cmd_pop_new(processor_t* proc);
+processor_err_t cmd_print(processor_t* proc);
 
 #endif

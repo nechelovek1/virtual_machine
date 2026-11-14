@@ -44,7 +44,6 @@ cmd_read_err_t translate_text(translate_ctx_t* ctx)
             continue;
         } else {
             printf("Error %d on line %ld\n", res, i + 1);
-            print_assembler_error(res);
             return res;
         }
     }
@@ -55,7 +54,7 @@ cmd_read_err_t translate_text(translate_ctx_t* ctx)
 cmd_read_err_t read_cmd(translate_ctx_t* ctx, line_t cmd_line)
 {
     size_t cmd_len = 0;
-    command_t cmd_code = PUSHM;
+    command_t cmd_code = CMD_CNT;
     cmd_read_err_t read_res = read_command_word(cmd_line.line, &cmd_len, &cmd_code);
 
     if (read_res != TRANSLATE_OK) {
@@ -65,14 +64,14 @@ cmd_read_err_t read_cmd(translate_ctx_t* ctx, line_t cmd_line)
     switch(cmd_code)
     {
         case PUSH:
-            return read_push(ctx, cmd_code, cmd_line, cmd_len);
-        case PUSHR:            
-        case POPR:
-            return read_pushr_popr(ctx, cmd_code, cmd_line, cmd_len);
-        case PUSHM:
-        case POPM:
-            return TRANSLATE_UNKNOWN_CMD;
         case POP:
+            return read_push_pop(ctx, cmd_code, cmd_line, cmd_len);
+        //case PUSHR:            
+        //case POPR:
+        //    return read_pushr_popr(ctx, cmd_code, cmd_line, cmd_len);
+        //case PUSHM:
+        //case POPM:
+        //    return TRANSLATE_UNKNOWN_CMD;
         case ADD:
         case SUB:
         case MUL:
@@ -82,6 +81,7 @@ cmd_read_err_t read_cmd(translate_ctx_t* ctx, line_t cmd_line)
         case RET:
         case HLT:
         case SQRT:
+        case PRNT:
             return read_cmd_without_args(ctx, cmd_code, cmd_line, cmd_len);
         case JMP:
         case JA:
@@ -95,8 +95,6 @@ cmd_read_err_t read_cmd(translate_ctx_t* ctx, line_t cmd_line)
         default:
             return TRANSLATE_UNKNOWN_CMD;
     }
-
-    return TRANSLATE_OK;
 }
 
 int create_label(translate_ctx_t* ctx, const char* label_value, int label_address)
@@ -247,12 +245,11 @@ int translate_context_destroy(translate_ctx_t* ctx)
 cmd_read_err_t read_command_word(const char* line, size_t* cmd_len, command_t* cmd_code)
 {
     char cmd_word[MAX_CMD_LEN + 1] = "";
-    sscanf(line, "%5s", cmd_word);
+    sscanf(line, " %5s%n", cmd_word, cmd_len);
     
     for (size_t i = 0; i < CMD_CNT; i++) {
         if (!strcmp(cmd_word, commands[i].cmd_word)) {
             ASM_LOG("[LOG]: Found command %s, code: %d\n", cmd_word, i)
-            *cmd_len = commands[i].cmd_word_len;
             *cmd_code = commands[i].cmd_code;
             return TRANSLATE_OK;
         }
@@ -412,24 +409,27 @@ cmd_read_err_t read_push_pop(translate_ctx_t* ctx, command_t cmd_code, line_t cm
     
     int cmd_code_with_bits = cmd_code;
 
-    //TODO сделать "умное чтение"
-    if (sscanf(cmd_line.line + cmd_len, "[ %2[A-DX] + %d %c%n", reg_name, &count, &endc, &n) == 3 && endc == ']') {
+    //TODO возможно добавить макросыы для каждого сканфа
+    ASM_LOG("[LOG]: Arg parse started\n")
+    if (sscanf(cmd_line.line + cmd_len, " [ %2[A-HX] + %d %c%n", reg_name, &count, &endc, &n) == 3 && endc == ']') {
         cmd_code_with_bits |= 0x80;
         cmd_code_with_bits |= 0x40;
         cmd_code_with_bits |= 0x20;
-    } else if (sscanf(cmd_line.line + cmd_len, "[ %2[A-DX] %c%n", reg_name, &endc, &n) == 2 && endc == ']') {
+    } else if (sscanf(cmd_line.line + cmd_len, " [ %2[A-HX] %c%n", reg_name, &endc, &n) == 2 && endc == ']') {
         cmd_code_with_bits |= 0x80;
         cmd_code_with_bits |= 0x40;    
-    } else if (sscanf(cmd_line.line + cmd_len, "[ %d %c%n", reg_name, &count, &endc, &n) == 2 && endc == ']') {
+    } else if (sscanf(cmd_line.line + cmd_len, " [ %d %c%n", &count, &endc, &n) == 2 && endc == ']') {
         cmd_code_with_bits |= 0x80;
         cmd_code_with_bits |= 0x20;        
-    } else if (sscanf(cmd_line.line + cmd_len, " %2[A-DX]%n", reg_name, &n) == 1) {
+    } else if (sscanf(cmd_line.line + cmd_len, " %2[A-HX]%n", reg_name, &n) == 1) {
         cmd_code_with_bits |= 0x40; 
-    } else if (sscanf(cmd_line.line + cmd_len, "%d%n", &count, &n) == 1 && cmd_code == PUSH) {
+    } else if (sscanf(cmd_line.line + cmd_len, " %d%n", &count, &n) == 1 && cmd_code == PUSH) {
         cmd_code_with_bits |= 0x20;
     } else if (!is_end_valid(cmd_line.line, cmd_len) || cmd_code != POP) {
         return TRANSLATE_TOO_MANY_ARGS;
     }
+
+    ASM_LOG("[LOG]: Finish arg parse\n")
     
     cmd_len += n;
     if (!is_end_valid(cmd_line.line, cmd_len)) {
@@ -440,16 +440,22 @@ cmd_read_err_t read_push_pop(translate_ctx_t* ctx, command_t cmd_code, line_t cm
     ctx->pc++;
 
     if (cmd_code_with_bits & 0x20) {
+        ASM_LOG("[LOG]: Found count field\n")
         ctx->bytecode[ctx->pc] = count;
         ctx->pc++;
     }
 
     if (cmd_code_with_bits & 0x40) {
-        if (get_reg_val(cmd_line.line, &reg_val) != TRANSLATE_OK) {
+        ASM_LOG("[LOG]: Found register field\n")
+        if (get_reg_val(reg_name, &reg_val) != TRANSLATE_OK) {
             return TRANSLATE_UNKNOWN_REG;
         }
         ctx->bytecode[ctx->pc] = reg_val;
         ctx->pc++;
+    }
+
+    if (cmd_code_with_bits & 0x80) {
+        ASM_LOG("[LOG]: Found memory field\n")
     }
 
     return TRANSLATE_OK;

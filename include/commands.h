@@ -6,13 +6,12 @@
 typedef enum {
     HLT,
     PUSH,
+    POP,
     ADD,
     SUB,
     DIV,
     MUL,
     OUT,
-    PUSHR,
-    POPR,
     JMP,
     JA,
     JAE,
@@ -23,18 +22,20 @@ typedef enum {
     IN,
     CALL,
     RET,
-    PUSHM,
-    POPM,
-    POP,
     SQRT,
+    PRNT,
     CMD_CNT
 } command_t;
 
 typedef enum {
-    AX,
-    BX,
-    CX,
-    DX,
+    REG_AX,
+    REG_BX,
+    REG_CX,
+    REG_DX,
+    REG_EX,
+    REG_FX,
+    REG_GX,
+    REG_HX,
     REGS_CNT
 } reg_t;
 
@@ -58,6 +59,5 @@ const size_t FLT_MULTIPLIER = 100;
  
 extern const cmd_struct_t commands[];
 extern const reg_struct_t registers[];
-
 
 #endif

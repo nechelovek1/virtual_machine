@@ -20,13 +20,21 @@ int processor_read_bytecode(processor_t* proc, FILE* fp)
     return 0;
 }
 
-int processor_init(processor_t* proc)
+int processor_init(processor_t* proc, size_t ram_size)
 {
     proc->stk = (stack_t) {};
     stack_init(&(proc->stk), STACK_MIN_CAPACITY ON_DBG(, __FILE__, __func__, __LINE__, "stk"));
 
     proc->call_stk = (stack_t) {};
     stack_init(&(proc->call_stk), STACK_MIN_CAPACITY ON_DBG(, __FILE__, __func__, __LINE__, "call_stk"));
+
+    proc->ram_size = ram_size;
+    proc->ram = (stack_elem_t* ) calloc(ram_size, sizeof(stack_elem_t));
+    
+    if (proc->ram == NULL) {
+        processor_destroy(proc);
+        return -1;
+    }
 
     return 0;
 }
@@ -50,9 +58,10 @@ int processor_loop(processor_t* proc)
 
         //processor_dump(proc);
         //getchar();
-
-        if (commands[cmd].cmd_func(proc)) {
+        processor_err_t res = PROCESSOR_OK;
+        if ((res = commands[cmd].cmd_func(proc)) != PROCESSOR_OK) {
             printf("Segmentation fault! Failed to run command: %d\n", cmd);
+            printf("Error: %d\n", res);
             printf("PC: %d\n", proc->pc);
             return -1;
         }
@@ -66,7 +75,16 @@ int processor_destroy(processor_t* proc)
 {
     stack_destroy(&proc->stk);
     stack_destroy(&proc->call_stk);
-    free(proc->code);
+
+    if (proc->code != NULL) {
+        free(proc->code);
+    } 
+
+    if (proc->ram != NULL) {
+        free(proc->ram);
+    }
+
+    *proc = (processor_t) {};
 
     return 0;
 }
@@ -187,7 +205,7 @@ processor_err_t cmd_out(processor_t* proc)
 
 processor_err_t cmd_hlt(processor_t* proc)
 {
-    printf("HALTED PC: %d", proc->pc);
+    printf("HALTED PC: %d\n", proc->pc);
     return PROCESSOR_OK;
 }
 
@@ -195,7 +213,7 @@ processor_err_t cmd_push_r(processor_t* proc)
 {
     proc->pc++;
     if (proc->pc >= proc->code_size) {
-        return PROCESSOR_SEGMENTATION_FAULT;
+        return PROCESSOR_OUT_OF_CODE;
     }
 
     stack_elem_t reg = proc->code[proc->pc];
@@ -213,7 +231,7 @@ processor_err_t cmd_pop_r(processor_t* proc)
 {
     proc->pc++;
     if (proc->pc >= proc->code_size) {
-        return PROCESSOR_SEGMENTATION_FAULT;
+        return PROCESSOR_OUT_OF_CODE;
     }   
     
     stack_elem_t reg = proc->code[proc->pc];
@@ -236,7 +254,7 @@ processor_err_t cmd_jmp(processor_t* proc)
 {
     proc->pc++;
     if (proc->pc >= proc->code_size) {
-        return PROCESSOR_SEGMENTATION_FAULT;
+        return PROCESSOR_OUT_OF_CODE;
     }   
 
     proc->pc = proc->code[proc->pc];
@@ -248,7 +266,7 @@ processor_err_t cmd_ja(processor_t* proc)
 {
     proc->pc++;
     if (proc->pc >= proc->code_size) {
-        return PROCESSOR_SEGMENTATION_FAULT;
+        return PROCESSOR_OUT_OF_CODE;
     }   
 
     stack_elem_t a = 0, b = 0;
@@ -273,7 +291,7 @@ processor_err_t cmd_jae(processor_t* proc)
 {
     proc->pc++;
     if (proc->pc >= proc->code_size) {
-        return PROCESSOR_SEGMENTATION_FAULT;
+        return PROCESSOR_OUT_OF_CODE;
     }   
 
     stack_elem_t a = 0, b = 0;
@@ -298,7 +316,7 @@ processor_err_t cmd_jb(processor_t* proc)
 {
     proc->pc++;
     if (proc->pc >= proc->code_size) {
-        return PROCESSOR_SEGMENTATION_FAULT;
+        return PROCESSOR_OUT_OF_CODE;
     }   
 
     stack_elem_t a = 0, b = 0;
@@ -323,7 +341,7 @@ processor_err_t cmd_jbe(processor_t* proc)
 {
     proc->pc++;
     if (proc->pc >= proc->code_size) {
-        return PROCESSOR_SEGMENTATION_FAULT;
+        return PROCESSOR_OUT_OF_CODE;
     }   
 
     stack_elem_t a = 0, b = 0;
@@ -335,7 +353,7 @@ processor_err_t cmd_jbe(processor_t* proc)
         return PROCESSOR_STACK_UNDERFLOW;
     }   
 
-    if (a >= b) {
+    if (a <= b) {
         proc->pc = proc->code[proc->pc];
     } else {
         proc->pc++;
@@ -348,7 +366,7 @@ processor_err_t cmd_je(processor_t* proc)
 {
     proc->pc++;
     if (proc->pc >= proc->code_size) {
-        return PROCESSOR_SEGMENTATION_FAULT;
+        return PROCESSOR_OUT_OF_CODE;
     }   
 
     stack_elem_t a = 0, b = 0;
@@ -373,7 +391,7 @@ processor_err_t cmd_jne(processor_t* proc)
 {
     proc->pc++;
     if (proc->pc >= proc->code_size) {
-        return PROCESSOR_SEGMENTATION_FAULT;
+        return PROCESSOR_OUT_OF_CODE;
     }   
 
     stack_elem_t a = 0, b = 0;
@@ -410,7 +428,7 @@ processor_err_t cmd_call(processor_t* proc)
 {
     proc->pc++;
     if (proc->pc >= proc->code_size) {
-        return PROCESSOR_SEGMENTATION_FAULT;
+        return PROCESSOR_OUT_OF_CODE;
     }
 
     stack_push(&(proc->call_stk), proc->pc + 1);
@@ -441,6 +459,29 @@ processor_err_t cmd_sqrt(processor_t* proc)
 
     proc->pc++;
     
+    return PROCESSOR_OK;
+}
+
+processor_err_t cmd_print(processor_t* proc)
+{
+    proc->pc++;
+    //TODO сделать полям структуры proc
+    const size_t SCREEN_HEIGHT = 32;
+    const size_t SCREEN_WIDTH = 32;
+
+    for (size_t i = 0; i < SCREEN_HEIGHT; i++) {
+        for (size_t j = 0; j < SCREEN_WIDTH; j++) {
+            if (proc->ram[i * SCREEN_WIDTH + j] == 1) {
+                putchar('#');
+                putchar('#');
+            } else {
+                putchar(' ');
+                putchar(' ');
+            }
+        }
+        putchar('\n');
+    }
+        
     return PROCESSOR_OK;
 }
 
@@ -487,7 +528,7 @@ void processor_dump(processor_t* proc)
     }
     fputc('\n', stderr);
 
-    int cmd = proc->code[proc->pc];
+    int cmd = proc->code[proc->pc] & 0x1f;
     if (cmd >= 0 && cmd < CMD_CNT) {
         fprintf(stderr, "Current command: %d - %s\n", commands[cmd].cmd_code, commands[cmd].cmd_word);
     } else {
@@ -563,7 +604,7 @@ processor_err_t cmd_pop_new(processor_t* proc)
         }
 
         proc->ram[addr] = elem;
-    } else if (cmd & 0x40 && !(cmd & 0x20)) {
+    } else if ((cmd & 0x40) && !(cmd & 0x20)) {
         stack_elem_t reg = proc->code[proc->pc]; 
         proc->pc++;
 
@@ -572,9 +613,9 @@ processor_err_t cmd_pop_new(processor_t* proc)
         }
 
         proc->regs[reg] = elem;
-    } else if (!(cmd & 0x40) && cmd & 0x20) {
-        return PROCESSOR_OK;
+    } else if ((cmd & 0x40) && (cmd & 0x20)) {
+        return PROCESSOR_BAD_BIT_FIELDS;
     } 
 
-    return PROCESSOR_SEGMENTATION_FAULT; //TODO добавить команду с некорректными опциями
+    return PROCESSOR_OK;
 }

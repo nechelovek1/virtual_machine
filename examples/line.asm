@@ -1,0 +1,26 @@
+PUSH 0
+POP AX
+
+loop_start:
+PUSH AX
+PUSH 32
+MUL
+PUSH AX
+ADD
+
+POP BX
+PUSH 1
+POP [BX]
+
+PUSH AX
+PUSH 1
+ADD
+POP AX
+
+PUSH 32
+PUSH AX
+JB loop_start:
+
+PRNT
+HLT
+
