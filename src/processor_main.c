@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
 
     processor_t proc = {};
 
-    processor_init(&proc, 1024);
+    processor_init(&proc, 32, 32);
     processor_read_bytecode(&proc, file);
 
     fclose(file);

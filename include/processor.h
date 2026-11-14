@@ -3,62 +3,15 @@
 
 #include <stdlib.h>
 
-#include "stack.h"
+#include "commands.h"
 
-extern const size_t MAX_CMD_NUM;
-extern const size_t STACK_MIN_CAPACITY;
-
-typedef struct _proc{
-    stack_t stk;
-    stack_elem_t* code;
-    size_t code_size;
-    stack_elem_t regs[8];
-    stack_t call_stk;
-    stack_elem_t *ram;
-    size_t ram_size;
-    int pc;
-} processor_t;
-
-typedef enum {
-    PROCESSOR_OK,
-    PROCESSOR_STACK_UNDERFLOW,
-    PROCESSOR_CALL_STACK_UNDERFLOW,
-    PROCESSOR_DIVISION_BY_ZERO,
-    PROCESSOR_OUT_OF_CODE,
-    PROCESSOR_UNKNOWN_REG,
-    PROCESSOR_OUT_OF_MEMORY,
-    PROCESSOR_BAD_BIT_FIELDS
-} processor_err_t;
+//extern const size_t MAX_CMD_NUM;
+const size_t STACK_MIN_CAPACITY = 5;
 
 int processor_read_bytecode(processor_t* proc, FILE* fp);
-int processor_init(processor_t* proc, size_t ram_size);
+int processor_init(processor_t* proc, int height, int width);
 int processor_loop(processor_t* proc);
 int processor_destroy(processor_t* proc);
 void processor_dump(processor_t* proc);
-
-processor_err_t cmd_push(processor_t* proc);
-processor_err_t cmd_pop(processor_t* proc);
-processor_err_t cmd_add(processor_t* proc);
-processor_err_t cmd_sub(processor_t* proc);
-processor_err_t cmd_div(processor_t* proc);
-processor_err_t cmd_mul(processor_t* proc);
-processor_err_t cmd_out(processor_t* proc);
-processor_err_t cmd_hlt(processor_t* proc);
-processor_err_t cmd_push_r(processor_t* proc);
-processor_err_t cmd_pop_r(processor_t* proc);
-processor_err_t cmd_jmp(processor_t* proc);
-processor_err_t cmd_ja(processor_t* proc);
-processor_err_t cmd_jae(processor_t* proc);
-processor_err_t cmd_jb(processor_t* proc);
-processor_err_t cmd_jbe(processor_t* proc);
-processor_err_t cmd_je(processor_t* proc);
-processor_err_t cmd_jne(processor_t* proc);
-processor_err_t cmd_in(processor_t* proc);
-processor_err_t cmd_call(processor_t* proc);
-processor_err_t cmd_ret(processor_t* proc);
-processor_err_t cmd_sqrt(processor_t* proc);
-processor_err_t cmd_push_new(processor_t* proc);
-processor_err_t cmd_pop_new(processor_t* proc);
-processor_err_t cmd_print(processor_t* proc);
 
 #endif

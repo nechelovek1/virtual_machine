@@ -41,21 +41,6 @@ int main(int argc, char* argv[])
     }
     print_labels(&ctx);
 
-    /*ctx.mode = true; //Первый проход
-    if (translate_text(&ctx) != TRANSLATE_OK) {
-        translate_context_destroy(&ctx);
-        return -1;
-    }
-    print_labels(&ctx);
-
-    ctx.bytecode_size = 0;
-    ctx.mode = false; //Второй проход
-    if (translate_text(&ctx) != TRANSLATE_OK) {
-        translate_context_destroy(&ctx);
-        return -1;
-    }
-    print_labels(&ctx);*/
-
     FILE* out_file = NULL;
     if ((out_file = fopen(argv[2], "wb")) == NULL) {
         printf("Failed to open %s", argv[2]);
